@@ -18,7 +18,6 @@ $headers = @{
 }
 
 # Payload
-
 $payload = @{
     cmdb_ci = "ATL - ATLANTAFED - DEV"
     u_business_justification = "Enhancement"
@@ -40,17 +39,54 @@ $payload = @{
     communication_plan = "Notify DevSecOps Agile Team"
 } | ConvertTo-Json
 
+try {
+    # Invoke the API and get the response
+    $response = Invoke-RestMethod -Uri $final_endpoint -Method Post -Headers $headers -Body $payload
+    
+    # Check if the response contains expected fields
+    if ($response -and $response.result) {
+        # Ticket creation was successful
+        Write-Host "Ticket created successfully."
+        
+        # Extract the ticket number and sys_id
+        $ticketNumber = $response.result.number
+        $sysId = $response.result.sys_id
+    }
+    else {
+        Write-Host "Error: The response did not contain expected data."
+    }
+}
+catch {
+    # Handle exceptions
+    Write-Host "An error occurred while trying to create the ServiceNow ticket."
+    
+    # If there's an HTTP error, show the status code and details
+    if ($_.Exception.Response -ne $null) {
+        $streamReader = [System.IO.StreamReader]::new($_.Exception.Response.GetResponseStream())
+        $errorResponse = $streamReader.ReadToEnd() | ConvertFrom-Json
+        Write-Host "Error Details: $($errorResponse | ConvertTo-Json -Depth 5)"
+        
+        # If status code is available, show it
+        $statusCode = $_.Exception.Response.StatusCode.value__
+        Write-Host "Status Code: $statusCode"
+        
+        if ($statusCode -eq 201) {
+            Write-Host "Ticket created successfully."
+        }
+        else {
+            Write-Host "Ticket creation failed."
+        }
+    }
+    else {
+        Write-Host "No additional error details available."
+    }
+}
 
-# Invoke the API
-$response = Invoke-RestMethod -Uri $final_endpoint -Method Post -Headers $headers -Body $payload
-
-# Output the response
-$response | ConvertTo-Json -Depth 5
-
-# Extract the ticket number
-$ticketNumber = $response.result.number
-$sysId = $response.result.sys_id
-
-# Print the ticket number and sys_id
-Write-Host "Ticket Number: $ticketNumber"
-Write-Host "Sys ID: $sysId"
+# Print the ticket number and sys_id at the end
+if ($ticketNumber -and $sysId) {
+    Write-Host "Ticket Number: $ticketNumber"
+    Write-Host "Sys ID: $sysId"
+}
+else {
+    Write-Host "Ticket Number and Sys ID are not available."
+}
