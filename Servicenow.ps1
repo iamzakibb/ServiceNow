@@ -45,4 +45,12 @@ $payload = @{
 $response = Invoke-RestMethod -Uri $final_endpoint -Method Post -Headers $headers -Body $payload
 
 # Output the response
-$response | ConvertTo-Json
+$response | ConvertTo-Json -Depth 5
+
+# Extract the ticket number
+$ticketNumber = $response.result.number
+$sysId = $response.result.sys_id
+
+# Print the ticket number and sys_id
+Write-Host "Ticket Number: $ticketNumber"
+Write-Host "Sys ID: $sysId"
