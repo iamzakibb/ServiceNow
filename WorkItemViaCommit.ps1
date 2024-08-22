@@ -11,7 +11,7 @@ Param(
 $base64AuthInfo = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes(":$token"))
 
 # Construct the API URL to get commits with associated work items
-$commitUrl = "https://dev.azure.com/$organization/$project/_apis/git/repositories/$repositoryId/commits?searchCriteria.includeWorkItems=true&api-version=5.0-preview.1"
+$commitUrl = "https://dev.azure.com/$organization/$project/_apis/git/repositories/$repositoryId/commits?searchCriteria.includeWorkItems=true&api-version=7.1-preview.1"
 
 # Make the API call to get commit details
 $response = Invoke-RestMethod -Uri $commitUrl -Method Get -Headers @{Authorization=("Basic $($base64AuthInfo)")}
@@ -45,7 +45,8 @@ foreach ($commit in $response.value) {
                 "Description"    = $description
                 "IterationPath"  = $workItemDetails.fields.'System.IterationPath'
                 "Discussion"     = $workItemDetails.fields.'System.History'
-            } 
+                "AssignedToEmail" = $workItemDetails.fields.'System.AssignedTo'.uniqueName
+                          } 
         }
         Write-Host "----------------------------------"
     }
