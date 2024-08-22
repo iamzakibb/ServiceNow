@@ -44,7 +44,6 @@ foreach ($commit in $response.value) {
                 "Priority"       = $workItemDetails.fields.'Microsoft.VSTS.Common.Priority'
                 "Description"    = $description
                 "IterationPath"  = $workItemDetails.fields.'System.IterationPath'
-                "Discussion"     = $workItemDetails.fields.'System.History'
                 "AssignedToEmail" = $workItemDetails.fields.'System.AssignedTo'.uniqueName
                           } 
         }
