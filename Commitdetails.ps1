@@ -14,7 +14,7 @@ $headers = @{
 }
 
 # REST API endpoint to get the latest commit in the main branch
-$uri = "https://dev.azure.com/$organization/$project/_apis/git/repositories/$repositoryId/commits?searchCriteria.itemVersion.version=$branchName&searchCriteria.$top=1&api-version=6.0"
+$uri = "https://dev.azure.com/$organization/$project/_apis/git/repositories/$repositoryId/commits?searchCriteria.itemVersion.version=$branchName&searchCriteria.$top=1&api-version=7.0"
 
 # Make the API call to get the latest commit
 $response = Invoke-RestMethod -Uri $uri -Method Get -Headers $headers
