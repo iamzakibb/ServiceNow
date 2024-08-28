@@ -11,7 +11,7 @@ Param(
 $base64AuthInfo = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes(":$token"))
 
 # Construct the API URL to get commit details
-$commitUrl = "https://dev.azure.com/$organization/$project/_apis/git/repositories/$repositoryId/commits?searchCriteria.includeWorkItems=true&api-version=7.1-preview.1"
+$commitUrl = "https://tfs.clev.frb.org/$organization/$project/_apis/git/repositories/$repositoryId/commits?searchCriteria.includeWorkItems=true&api-version=7.1-preview.1"
 
 try {
     # Make the API call to get commit details
