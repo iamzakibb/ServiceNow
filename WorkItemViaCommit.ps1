@@ -63,5 +63,5 @@ try {
     }
 } catch {
     Write-Host "An error occurred: $($_.Exception.Message)"
-    Write-Host "Stack Trace: $($_.Exception.StackTrace)"
+    
 }
