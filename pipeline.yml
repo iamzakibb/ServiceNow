@@ -79,10 +79,10 @@ steps:
 - script: |
     # Define variables
     $collectionurl = "https://frb..." # Adjust accordingly
-    $organization = "$(Build.Repository.Name)"
-    $project = "$(Build.Repository.Name)"
-    $repoId = "$(Build.SourceBranch)"
-    $token = "$(System.AccessToken)"
+    $organization = ""
+    $project = ""
+    $repoId = ""
+    $token = ""
     $instance = "https://frsdev.servicenowservices.com"
     $username = "YourServiceNowUsername"
     $password = "YourServiceNowPassword"
