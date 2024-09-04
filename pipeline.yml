@@ -1,144 +1,253 @@
-# Main script execution
-$collectionurl = "https://frb..."
-$organization = "YourOrganization"
-$project = "YourProject"
-$repoId = "YourRepoId"
-$token = "YourPAT"
-$instance = "https://frsdev.servicenowservices.com"
-$username = "YourServiceNowUsername"
-$password = "YourServiceNowPassword"
+trigger:
+- none
 
-# Function to retrieve the latest commit and associated work items
-function Get-CommitAndWorkItemDetails {
-    Param(
-        [string]$collectionurl,
-        [string]$organization,
-        [string]$project,
-        [string]$repoId,
-        [string]$token
-    )
+pool:
+  vmImage: 'ubuntu-latest'
 
-    # Base64-encode the PAT for authorization
-    $base64AuthInfo = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes(":$token"))
+parameters:
+  - name: cmdb_ci
+    displayName: "Configuration Item"
+    type: string
+    default: "ATL - ATLANTAFED - DEV"
+  
+  - name: u_business_justification
+    displayName: "Business Justification"
+    type: string
+    default: "Enhancement"
+  
+  - name: type
+    displayName: "Change Type"
+    type: string
+    default: "Standard"
+  
+  - name: impact
+    displayName: "Impact"
+    type: string
+    default: "2"
+  
+  - name: state
+    displayName: "State"
+    type: string
+    default: "New"
+  
+  - name: assignment_group
+    displayName: "Assignment Group"
+    type: string
+    default: "FIG-SN-DBA-Support"
+  
+  - name: category
+    displayName: "Category"
+    type: string
+    default: "Software"
+  
+  - name: subcategory
+    displayName: "Subcategory"
+    type: string
+    default: "Internal Application"
+  
+  - name: justification
+    displayName: "Justification"
+    type: string
+    default: "Increase Productivity and meets DevOps Goals"
+  
+  - name: implementation_plan
+    displayName: "Implementation Plan"
+    type: string
+    default: "Configure Azure DEVOPS Pipeline"
+  
+  - name: risk_and_impact_analysis
+    displayName: "Risk and Impact Analysis"
+    type: string
+    default: "See commit details and work item description."
+  
+  - name: backout_plan
+    displayName: "Backout Plan"
+    type: string
+    default: "Remove Pipeline"
+  
+  - name: test_plan
+    displayName: "Test Plan"
+    type: string
+    default: "Execute Pipeline and verify connectivity"
+  
+  - name: communication_plan
+    displayName: "Communication Plan"
+    type: string
+    default: "Notify DevSecOps Agile Team"
 
-    # Construct the API URL to get commit details and associated work items
-    $baseUrl = "$collectionurl/$organization/$project/_apis/git/repositories/$repoId/commits?searchCriteria.includeWorkItems=true&api-version=7.0-preview.1"
+steps:
+- script: |
+    # Define variables
+    $collectionurl = "https://frb..." # Adjust accordingly
+    $organization = "$(Build.Repository.Name)"
+    $project = "$(Build.Repository.Name)"
+    $repoId = "$(Build.SourceBranch)"
+    $token = "$(System.AccessToken)"
+    $instance = "https://frsdev.servicenowservices.com"
+    $username = "YourServiceNowUsername"
+    $password = "YourServiceNowPassword"
 
-    # Make the API call using the encoded PAT for authorization
-    $response = (Invoke-RestMethod -Uri $baseUrl -Method Get -Headers @{Authorization=("Basic $base64AuthInfo")}).value
+    # Function to retrieve the latest commit and associated work items
+    function Get-CommitAndWorkItemDetails {
+        Param(
+            [string]$collectionurl,
+            [string]$organization,
+            [string]$project,
+            [string]$repoId,
+            [string]$token
+        )
 
-    # Retrieve the latest commit with associated work items
-    $commitWithWorkItems = $response | Where-Object { $_.workItems.Count -gt 0 } | Select-Object -First 1
+        # Base64-encode the PAT for authorization
+        $base64AuthInfo = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes(":$token"))
 
-    if ($commitWithWorkItems) {
-        $commitDetails = @{
-            "CommitID" = $commitWithWorkItems.commitId
-            "Author" = $commitWithWorkItems.author.name
-            "Date" = $commitWithWorkItems.author.date
-            "Comment" = $commitWithWorkItems.comment
-            "WorkItems" = @()
+        # Construct the API URL to get commit details and associated work items
+        $baseUrl = "$collectionurl/$organization/$project/_apis/git/repositories/$repoId/commits?searchCriteria.includeWorkItems=true&api-version=7.0-preview.1"
+
+        # Make the API call using the encoded PAT for authorization
+        $response = (Invoke-RestMethod -Uri $baseUrl -Method Get -Headers @{Authorization=("Basic $base64AuthInfo")}).value
+
+        # Retrieve the latest commit with associated work items
+        $commitWithWorkItems = $response | Where-Object { $_.workItems.Count -gt 0 } | Select-Object -First 1
+
+        if ($commitWithWorkItems) {
+            $commitDetails = @{
+                "CommitID" = $commitWithWorkItems.commitId
+                "Author" = $commitWithWorkItems.author.name
+                "Date" = $commitWithWorkItems.author.date
+                "Comment" = $commitWithWorkItems.comment
+                "WorkItems" = @()
+            }
+
+            # Retrieve details of associated work items
+            foreach ($workItem in $commitWithWorkItems.workItems) {
+                $workItemUrl = $workItem.url + "?api-version=7.0"
+                $workItemDetails = Invoke-RestMethod -Uri $workItemUrl -Method Get -Headers @{Authorization=("Basic $base64AuthInfo")}
+
+                $commitDetails.WorkItems += @{
+                    "WitID" = $workItemDetails.fields.'System.Id'
+                    "rev" = $workItemDetails.rev
+                    "Title" = $workItemDetails.fields.'System.Title'
+                    "AssignedTo" = $workItemDetails.fields.'System.AssignedTo.uniqueName'
+                    "ChangedDate" = $workItemDetails.fields.'System.ChangedDate'
+                    "ChangedBy" = $workItemDetails.fields.'System.ChangedBy.uniqueName'
+                    "WorkItemType" = $workItemDetails.fields.'System.WorkItemType'
+                    "Priority" = $workItemDetails.fields.'Microsoft.VSTS.Common.Priority'
+                    "Description" = ($workItemDetails.fields.'System.Description' -replace '<.*?>','')
+                    "IterationPath" = $workItemDetails.fields.'System.IterationPath'
+                    "Discussion" = $workItemDetails.fields.'System.History'
+                }
+            }
+
+            return $commitDetails
+        } else {
+            Write-Host "No commits found with associated work items."
+            return $null
+        }
+    }
+
+    # Function to create a ServiceNow ticket
+    function Create-ServiceNowTicket {
+        Param(
+            [string]$instance,
+            [string]$username,
+            [string]$password,
+            [hashtable]$commitDetails,
+            [string]$cmdb_ci,
+            [string]$u_business_justification,
+            [string]$type,
+            [string]$impact,
+            [string]$state,
+            [string]$assignment_group,
+            [string]$category,
+            [string]$subcategory,
+            [string]$justification,
+            [string]$implementation_plan,
+            [string]$risk_and_impact_analysis,
+            [string]$backout_plan,
+            [string]$test_plan,
+            [string]$communication_plan
+        )
+
+        $change_endpoint = "/api/now/table/change_request"
+        $final_endpoint = "$instance$change_endpoint"
+
+        # Convert credentials to a secure string for Basic Auth
+        $pair = "{0}:{1}" -f $username, $password
+        $encodedCreds = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes($pair))
+
+        # Headers
+        $headers = @{
+            'Content-Type' = 'application/json'
+            'Accept' = 'application/json'
+            'Authorization' = "Basic $encodedCreds"
         }
 
-        # Retrieve details of associated work items
-        foreach ($workItem in $commitWithWorkItems.workItems) {
-            $workItemUrl = $workItem.url + "?api-version=7.0"
-            $workItemDetails = Invoke-RestMethod -Uri $workItemUrl -Method Get -Headers @{Authorization=("Basic $base64AuthInfo")}
+        # Dynamic Payload based on commit details
+        $payload = @{
+            cmdb_ci = $cmdb_ci
+            u_business_justification = $u_business_justification
+            requested_by = $commitDetails.Author
+            type = $type
+            priority = $commitDetails.WorkItems[0].Priority
+            impact = $impact
+            state = $state
+            assignment_group = $assignment_group
+            category = $category
+            subcategory = $subcategory
+            short_description = "Commit: $($commitDetails.CommitID) - $($commitDetails.Comment)"
+            description = $commitDetails.WorkItems[0].Description
+            justification = $justification
+            implementation_plan = $implementation_plan
+            risk_and_impact_analysis = $risk_and_impact_analysis
+            backout_plan = $backout_plan
+            test_plan = $test_plan
+            communication_plan = $communication_plan
+        } | ConvertTo-Json
 
-            $commitDetails.WorkItems += @{
-                "WitID" = $workItemDetails.fields.'System.Id'
-                "rev" = $workItemDetails.rev
-                "Title" = $workItemDetails.fields.'System.Title'
-                "AssignedTo" = $workItemDetails.fields.'System.AssignedTo.uniqueName'
-                "ChangedDate" = $workItemDetails.fields.'System.ChangedDate'
-                "ChangedBy" = $workItemDetails.fields.'System.ChangedBy.uniqueName'
-                "WorkItemType" = $workItemDetails.fields.'System.WorkItemType'
-                "Priority" = $workItemDetails.fields.'Microsoft.VSTS.Common.Priority'
-                "Description" = ($workItemDetails.fields.'System.Description' -replace '<.*?>','')
-                "IterationPath" = $workItemDetails.fields.'System.IterationPath'
-                "Discussion" = $workItemDetails.fields.'System.History'
+        try {
+            # Invoke the API and get the response
+            $response = Invoke-RestMethod -Uri $final_endpoint -Method Post -Headers $headers -Body $payload
+            
+            # Check if the response contains expected fields
+            if ($response -and $response.result) {
+                Write-Host "Ticket created successfully."
+                Write-Host "Ticket Number: $($response.result.number)"
+                Write-Host "Sys ID: $($response.result.sys_id)"
+            }
+            else {
+                Write-Host "Error: The response did not contain expected data."
             }
         }
+        catch {
+            Write-Host "An error occurred while trying to create the ServiceNow ticket."
+            if ($_.Exception.Response -ne $null) {
+                $streamReader = [System.IO.StreamReader]::new($_.Exception.Response.GetResponseStream())
+                $errorResponse = $streamReader.ReadToEnd() | ConvertFrom-Json
+                Write-Host "Error Details: $($errorResponse | ConvertTo-Json -Depth 5)"
+                Write-Host "Status Code: $($_.Exception.Response.StatusCode.value__)"
+            }
+        }
+    }
 
-        return $commitDetails
+    $commitDetails = Get-CommitAndWorkItemDetails -collectionurl $collectionurl -organization $organization -project $project -repoId $repoId -token $token
+
+    if ($commitDetails) {
+        Create-ServiceNowTicket -instance $instance -username $username -password $password `
+                               -commitDetails $commitDetails `
+                               -cmdb_ci "$(cmdb_ci)" `
+                               -u_business_justification "$(u_business_justification)" `
+                               -type "$(type)" `
+                               -impact "$(impact)" `
+                               -state "$(state)" `
+                               -assignment_group "$(assignment_group)" `
+                               -category "$(category)" `
+                               -subcategory "$(subcategory)" `
+                               -justification "$(justification)" `
+                               -implementation_plan "$(implementation_plan)" `
+                               -risk_and_impact_analysis "$(risk_and_impact_analysis)" `
+                               -backout_plan "$(backout_plan)" `
+                               -test_plan "$(test_plan)" `
+                               -communication_plan "$(communication_plan)"
     } else {
-        Write-Host "No commits found with associated work items."
-        return $null
+        Write-Host "Failed to retrieve commit and work item details. No ticket will be created."
     }
-}
-
-# Function to create a ServiceNow ticket
-function Create-ServiceNowTicket {
-    Param(
-        [string]$instance,
-        [string]$username,
-        [string]$password,
-        [hashtable]$commitDetails
-    )
-
-    $change_endpoint = "/api/now/table/change_request"
-    $final_endpoint = "$instance$change_endpoint"
-
-    # Convert credentials to a secure string for Basic Auth
-    $pair = "{0}:{1}" -f $username, $password
-    $encodedCreds = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes($pair))
-
-    # Headers
-    $headers = @{
-        'Content-Type' = 'application/json'
-        'Accept' = 'application/json'
-        'Authorization' = "Basic $encodedCreds"
-    }
-
-    # Dynamic Payload based on commit details
-    $payload = @{
-        cmdb_ci = "ATL - ATLANTAFED - DEV"
-        u_business_justification = "Enhancement"
-        requested_by = $commitDetails.Author
-        type = "Standard"
-        priority = $commitDetails.WorkItems[0].Priority
-        impact = "2"
-        state = "New"
-        assignment_group = "FIG-SN-DBA-Support"
-        category = "Software"
-        subcategory = "Internal Application"
-        short_description = "Commit: $($commitDetails.CommitID) - $($commitDetails.Comment)"
-        description = $commitDetails.WorkItems[0].Description
-        justification = "Increase Productivity and meets DevOps Goals"
-        implementation_plan = "Configure Azure DEVOPS Pipeline"
-        risk_and_impact_analysis = "See commit details and work item description."
-        backout_plan = "Remove Pipeline"
-        test_plan = "Execute Pipeline and verify connectivity"
-        communication_plan = "Notify DevSecOps Agile Team"
-    } | ConvertTo-Json
-
-    try {
-        # Invoke the API and get the response
-        $response = Invoke-RestMethod -Uri $final_endpoint -Method Post -Headers $headers -Body $payload
-        
-        # Check if the response contains expected fields
-        if ($response -and $response.result) {
-            Write-Host "Ticket created successfully."
-            Write-Host "Ticket Number: $($response.result.number)"
-            Write-Host "Sys ID: $($response.result.sys_id)"
-        }
-        else {
-            Write-Host "Error: The response did not contain expected data."
-        }
-    }
-    catch {
-        Write-Host "An error occurred while trying to create the ServiceNow ticket."
-        if ($_.Exception.Response -ne $null) {
-            $streamReader = [System.IO.StreamReader]::new($_.Exception.Response.GetResponseStream())
-            $errorResponse = $streamReader.ReadToEnd() | ConvertFrom-Json
-            Write-Host "Error Details: $($errorResponse | ConvertTo-Json -Depth 5)"
-            Write-Host "Status Code: $($_.Exception.Response.StatusCode.value__)"
-        }
-    }
-}
-
-
-$commitDetails = Get-CommitAndWorkItemDetails -collectionurl $collectionurl -organization $organization -project $project -repoId $repoId -token $token
-
-if ($commitDetails) {
-    Create-ServiceNowTicket -instance $instance -username $username -password $password -commitDetails $commitDetails
-}
