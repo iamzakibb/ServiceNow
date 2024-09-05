@@ -182,7 +182,7 @@ steps:
             'Authorization' = "Basic $encodedCreds"
         }
 
-        # Dynamic Payload based on commit details and parameters
+        # Dynamic Payload based on commit details
         $payload = @{
             cmdb_ci = "${{ parameters.cmdb_ci }}"
             u_business_justification = "${{ parameters.u_business_justification }}"
@@ -210,9 +210,17 @@ steps:
 
             # Check if the response contains expected fields
             if ($response -and $response.result) {
+                $ticketNumber = $response.result.number
+                $sysID = $response.result.sys_id
+
+                # Display the ticket number and sys_id
                 Write-Host "Ticket created successfully."
-                Write-Host "Ticket Number: $($response.result.number)"
-                Write-Host "Sys ID: $($response.result.sys_id)"
+                Write-Host "Ticket Number: $ticketNumber"
+                Write-Host "Sys ID: $sysID"
+
+                # Set pipeline variables
+                Write-Host "##vso[task.setvariable variable=TicketNumber;]$ticketNumber"
+                Write-Host "##vso[task.setvariable variable=SysID;]$sysID"
             }
             else {
                 Write-Host "Error: The response did not contain expected data."
@@ -229,26 +237,35 @@ steps:
         }
     }
 
-    $commitDetails = Get-CommitAndWorkItemDetails -collectionurl $collectionurl -organization $organization -project $project -repoId $repoId -token $token
+    # Invoke the functions
+    $commitDetails = Get-CommitAndWorkItemDetails `
+        -collectionurl $collectionurl `
+        -organization $organization `
+        -project $project `
+        -repoId $repoId `
+        -token $token
 
     if ($commitDetails) {
-        Create-ServiceNowTicket -instance $instance -username $username -password $password `
-                               -commitDetails $commitDetails `
-                               -cmdb_ci "${{ parameters.cmdb_ci }}" `
-                               -u_business_justification "${{ parameters.u_business_justification }}" `
-                               -type "${{ parameters.type }}" `
-                               -impact "${{ parameters.impact }}" `
-                               -state "${{ parameters.state }}" `
-                               -assignment_group "${{ parameters.assignment_group }}" `
-                               -category "${{ parameters.category }}" `
-                               -subcategory "${{ parameters.subcategory }}" `
-                               -justification "${{ parameters.justification }}" `
-                               -implementation_plan "${{ parameters.implementation_plan }}" `
-                               -risk_and_impact_analysis "${{ parameters.risk_and_impact_analysis }}" `
-                               -backout_plan "${{ parameters.backout_plan }}" `
-                               -test_plan "${{ parameters.test_plan }}" `
-                               -communication_plan "${{ parameters.communication_plan }}"
-    } else {
-        Write-Host "No commit details were found."
+        Create-ServiceNowTicket `
+            -instance $instance `
+            -username $username `
+            -password $password `
+            -commitDetails $commitDetails `
+            -cmdb_ci "${{ parameters.cmdb_ci }}" `
+            -u_business_justification "${{ parameters.u_business_justification }}" `
+            -type "${{ parameters.type }}" `
+            -impact "${{ parameters.impact }}" `
+            -state "${{ parameters.state }}" `
+            -assignment_group "${{ parameters.assignment_group }}" `
+            -category "${{ parameters.category }}" `
+            -subcategory "${{ parameters.subcategory }}" `
+            -justification "${{ parameters.justification }}" `
+            -implementation_plan "${{ parameters.implementation_plan }}" `
+            -risk_and_impact_analysis "${{ parameters.risk_and_impact_analysis }}" `
+            -backout_plan "${{ parameters.backout_plan }}" `
+            -test_plan "${{ parameters.test_plan }}" `
+            -communication_plan "${{ parameters.communication_plan }}"
     }
-  displayName: "Create ServiceNow Ticket"
+    else {
+        Write-Host "No valid commit details found."
+    }
