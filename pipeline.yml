@@ -5,75 +5,75 @@ pool:
   vmImage: 'ubuntu-latest'
 
 parameters:
-  - name: cmdb_ci
-    displayName: "Configuration Item"
-    type: string
-    default: "ATL - ATLANTAFED - DEV"
-  
-  - name: u_business_justification
-    displayName: "Business Justification"
-    type: string
-    default: "Enhancement"
-  
-  - name: type
-    displayName: "Change Type"
-    type: string
-    default: "Standard"
-  
-  - name: impact
-    displayName: "Impact"
-    type: string
-    default: "2"
-  
-  - name: state
-    displayName: "State"
-    type: string
-    default: "New"
-  
-  - name: assignment_group
-    displayName: "Assignment Group"
-    type: string
-    default: "FIG-SN-DBA-Support"
-  
-  - name: category
-    displayName: "Category"
-    type: string
-    default: "Software"
-  
-  - name: subcategory
-    displayName: "Subcategory"
-    type: string
-    default: "Internal Application"
-  
-  - name: justification
-    displayName: "Justification"
-    type: string
-    default: "Increase Productivity and meets DevOps Goals"
-  
-  - name: implementation_plan
-    displayName: "Implementation Plan"
-    type: string
-    default: "Configure Azure DEVOPS Pipeline"
-  
-  - name: risk_and_impact_analysis
-    displayName: "Risk and Impact Analysis"
-    type: string
-    default: "See commit details and work item description."
-  
-  - name: backout_plan
-    displayName: "Backout Plan"
-    type: string
-    default: "Remove Pipeline"
-  
-  - name: test_plan
-    displayName: "Test Plan"
-    type: string
-    default: "Execute Pipeline and verify connectivity"
-  
-  - name: communication_plan
-    displayName: "Communication Plan"
-    type: string
-    default: "Notify DevSecOps Agile Team"
+- name: cmdb_ci
+  displayName: "Configuration Item"
+  type: string
+  default: "ATL - ATLANTAFED - DEV"
+
+- name: u_business_justification
+  displayName: "Business Justification"
+  type: string
+  default: "Enhancement"
+
+- name: type
+  displayName: "Change Type"
+  type: string
+  default: "Standard"
+
+- name: impact
+  displayName: "Impact"
+  type: string
+  default: "2"
+
+- name: state
+  displayName: "State"
+  type: string
+  default: "New"
+
+- name: assignment_group
+  displayName: "Assignment Group"
+  type: string
+  default: "FIG-SN-DBA-Support"
+
+- name: category
+  displayName: "Category"
+  type: string
+  default: "Software"
+
+- name: subcategory
+  displayName: "Subcategory"
+  type: string
+  default: "Internal Application"
+
+- name: justification
+  displayName: "Justification"
+  type: string
+  default: "Increase Productivity and meets DevOps Goals"
+
+- name: implementation_plan
+  displayName: "Implementation Plan"
+  type: string
+  default: "Configure Azure DEVOPS Pipeline"
+
+- name: risk_and_impact_analysis
+  displayName: "Risk and Impact Analysis"
+  type: string
+  default: "See commit details and work item description."
+
+- name: backout_plan
+  displayName: "Backout Plan"
+  type: string
+  default: "Remove Pipeline"
+
+- name: test_plan
+  displayName: "Test Plan"
+  type: string
+  default: "Execute Pipeline and verify connectivity"
+
+- name: communication_plan
+  displayName: "Communication Plan"
+  type: string
+  default: "Notify DevSecOps Agile Team"
 
 steps:
 - script: |
@@ -182,32 +182,32 @@ steps:
             'Authorization' = "Basic $encodedCreds"
         }
 
-        # Dynamic Payload based on commit details
+        # Dynamic Payload based on commit details and parameters
         $payload = @{
-            cmdb_ci = $cmdb_ci
-            u_business_justification = $u_business_justification
+            cmdb_ci = "${{ parameters.cmdb_ci }}"
+            u_business_justification = "${{ parameters.u_business_justification }}"
             requested_by = $commitDetails.Author
-            type = $type
+            type = "${{ parameters.type }}"
             priority = $commitDetails.WorkItems[0].Priority
-            impact = $impact
-            state = $state
-            assignment_group = $assignment_group
-            category = $category
-            subcategory = $subcategory
+            impact = "${{ parameters.impact }}"
+            state = "${{ parameters.state }}"
+            assignment_group = "${{ parameters.assignment_group }}"
+            category = "${{ parameters.category }}"
+            subcategory = "${{ parameters.subcategory }}"
             short_description = "Commit: $($commitDetails.CommitID) - $($commitDetails.Comment)"
             description = $commitDetails.WorkItems[0].Description
-            justification = $justification
-            implementation_plan = $implementation_plan
-            risk_and_impact_analysis = $risk_and_impact_analysis
-            backout_plan = $backout_plan
-            test_plan = $test_plan
-            communication_plan = $communication_plan
+            justification = "${{ parameters.justification }}"
+            implementation_plan = "${{ parameters.implementation_plan }}"
+            risk_and_impact_analysis = "${{ parameters.risk_and_impact_analysis }}"
+            backout_plan = "${{ parameters.backout_plan }}"
+            test_plan = "${{ parameters.test_plan }}"
+            communication_plan = "${{ parameters.communication_plan }}"
         } | ConvertTo-Json
 
         try {
             # Invoke the API and get the response
             $response = Invoke-RestMethod -Uri $final_endpoint -Method Post -Headers $headers -Body $payload
-            
+
             # Check if the response contains expected fields
             if ($response -and $response.result) {
                 Write-Host "Ticket created successfully."
@@ -234,20 +234,21 @@ steps:
     if ($commitDetails) {
         Create-ServiceNowTicket -instance $instance -username $username -password $password `
                                -commitDetails $commitDetails `
-                               -cmdb_ci "$(cmdb_ci)" `
-                               -u_business_justification "$(u_business_justification)" `
-                               -type "$(type)" `
-                               -impact "$(impact)" `
-                               -state "$(state)" `
-                               -assignment_group "$(assignment_group)" `
-                               -category "$(category)" `
-                               -subcategory "$(subcategory)" `
-                               -justification "$(justification)" `
-                               -implementation_plan "$(implementation_plan)" `
-                               -risk_and_impact_analysis "$(risk_and_impact_analysis)" `
-                               -backout_plan "$(backout_plan)" `
-                               -test_plan "$(test_plan)" `
-                               -communication_plan "$(communication_plan)"
+                               -cmdb_ci "${{ parameters.cmdb_ci }}" `
+                               -u_business_justification "${{ parameters.u_business_justification }}" `
+                               -type "${{ parameters.type }}" `
+                               -impact "${{ parameters.impact }}" `
+                               -state "${{ parameters.state }}" `
+                               -assignment_group "${{ parameters.assignment_group }}" `
+                               -category "${{ parameters.category }}" `
+                               -subcategory "${{ parameters.subcategory }}" `
+                               -justification "${{ parameters.justification }}" `
+                               -implementation_plan "${{ parameters.implementation_plan }}" `
+                               -risk_and_impact_analysis "${{ parameters.risk_and_impact_analysis }}" `
+                               -backout_plan "${{ parameters.backout_plan }}" `
+                               -test_plan "${{ parameters.test_plan }}" `
+                               -communication_plan "${{ parameters.communication_plan }}"
     } else {
-        Write-Host "Failed to retrieve commit and work item details. No ticket will be created."
+        Write-Host "No commit details were found."
     }
+  displayName: "Create ServiceNow Ticket"
