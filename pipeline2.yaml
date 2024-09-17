@@ -187,7 +187,7 @@ steps:
           $payload = @{
               cmdb_ci = "${{ parameters.cmdb_ci }}"
               u_business_justification = "${{ parameters.u_business_justification }}"
-              requested_by = $commitDetails.Author
+              requested_by = $commitDetails.WorkItems.AssignedTo
               type = "${{ parameters.type }}"
               priority = $commitDetails.WorkItems[0].Priority
               impact = "${{ parameters.impact }}"
@@ -196,7 +196,7 @@ steps:
               category = "${{ parameters.category }}"
               subcategory = "${{ parameters.subcategory }}"
               short_description = "Commit: $($commitDetails.CommitID) - $($commitDetails.Comment)"
-              description = $commitDetails.WorkItems.Title
+              description = ($commitDetails.WorkItems | ForEach-Object { "$($_.WitID) - $($_.Title)" }) -join "`n"
               justification = "${{ parameters.justification }}"
               implementation_plan = "${{ parameters.implementation_plan }}"
               risk_and_impact_analysis = "${{ parameters.risk_and_impact_analysis }}"
