@@ -128,7 +128,7 @@ steps:
                       "WitID" = $workItemDetails.fields.'System.Id'
                       "rev" = $workItemDetails.rev
                       "Title" = $workItemDetails.fields.'System.Title'
-                      "AssignedTo" = $workItemDetails.fields.'System.AssignedTo'.uniqueName
+                      "AssignedTo" = $workItemDetails.fields.'System.AssignedTo'.displayName
                       "ChangedDate" = $workItemDetails.fields.'System.ChangedDate'
                       "ChangedBy" = $workItemDetails.fields.'System.ChangedBy'.uniqueName
                       "WorkItemType" = $workItemDetails.fields.'System.WorkItemType'
