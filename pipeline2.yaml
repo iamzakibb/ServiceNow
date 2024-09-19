@@ -125,7 +125,7 @@ steps:
                   $workItemDetails = Invoke-RestMethod -Uri $workItemUrl -Method Get -Headers @{Authorization=("Basic $base64AuthInfo")}
 
                   $commitDetails.WorkItems += @{
-                      "WitID" = $workItemDetails.fields.'System.Id'
+                      "WitID" = $workItemDetails.id
                       "rev" = $workItemDetails.rev
                       "Title" = $workItemDetails.fields.'System.Title'
                       "AssignedTo" = $workItemDetails.fields.'System.AssignedTo'.displayName
@@ -187,7 +187,7 @@ steps:
           $payload = @{
               cmdb_ci = "${{ parameters.cmdb_ci }}"
               u_business_justification = "${{ parameters.u_business_justification }}"
-              requested_by = $commitDetails.Author
+              requested_by = $commitDetails.WorkItems.ChangedBy
               type = "${{ parameters.type }}"
               priority = $commitDetails.WorkItems[0].Priority
               impact = "${{ parameters.impact }}"
