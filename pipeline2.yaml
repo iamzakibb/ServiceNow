@@ -188,7 +188,7 @@ steps:
           $payload = @{
               cmdb_ci = "${{ parameters.cmdb_ci }}"
               u_business_justification = "${{ parameters.u_business_justification }}"
-              $requested_by = $requestedBy
+              requested_by = $requestedBy
               type = "${{ parameters.type }}"
               priority = $commitDetails.WorkItems[0].Priority
               impact = "${{ parameters.impact }}"
