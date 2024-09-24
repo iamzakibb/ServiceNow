@@ -182,12 +182,13 @@ steps:
               'Accept' = 'application/json'
               'Authorization' = "Basic $encodedCreds"
           }
+          $requestedBy = $env:BUILD_REQUESTEDFOR
 
           # Dynamic Payload based on commit details
           $payload = @{
               cmdb_ci = "${{ parameters.cmdb_ci }}"
               u_business_justification = "${{ parameters.u_business_justification }}"
-              $requested_by = if ($commitDetails.WorkItems[0].ChangedBy) { $commitDetails.WorkItems[0].ChangedBy } else { $commitDetails.WorkItems[0].AssignedTo }
+              $requested_by = $requestedBy
               type = "${{ parameters.type }}"
               priority = $commitDetails.WorkItems[0].Priority
               impact = "${{ parameters.impact }}"
