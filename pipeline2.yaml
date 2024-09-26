@@ -87,6 +87,7 @@ steps:
       $instance = "https://frsdev.servicenowservices.com"
       $username = "YourServiceNowUsername"
       $password = "YourServiceNowPassword"
+      $requestedBy = $env:BUILD_REQUESTEDFOR
 
       # Function to retrieve the latest commit and associated work items
       function Get-CommitAndWorkItemDetails {
@@ -182,7 +183,7 @@ steps:
               'Accept' = 'application/json'
               'Authorization' = "Basic $encodedCreds"
           }
-          $requestedBy = $env:BUILD_REQUESTEDFOR
+          
 
           # Dynamic Payload based on commit details
           $payload = @{
