@@ -230,7 +230,7 @@ steps:
                       "Discussion" = $workItemDetails.fields.'System.History'
                   }
 
-              return $commitDetails
+              return $commitDetailsf
           }
           else {
               Write-Host "No commits found with associated work items."
@@ -286,12 +286,27 @@ steps:
 
           try {
               $response = Invoke-RestMethod -Uri $final_endpoint -Method Post -Headers $headers -Body $payload
-              if ($response.result) {
+              if ($response.result -and $response.result) {
+                  $ticketNumber = $response.result.number
+                  $sysID = $response.result.sys_id
+
+                  # Display the ticket number and sys_id
                   Write-Host "Ticket created successfully."
-                  Write-Host "Ticket Number: $($response.result.number)"
+                  Write-Host "Ticket Number: $ticketNumber"
+                  Write-Host "Sys ID: $sysID"
+
+                  # Set pipeline variables
+                  Write-Host "##vso[task.setvariable variable=TicketNumber;]$ticketNumber"
+                  Write-Host "##vso[task.setvariable variable=SysID;]$sysID"
               }
           } catch {
-              Write-Host "Error occurred while creating ticket."
+              Write-Host "An error occurred while trying to create the ServiceNow ticket."
+              if ($_.Exception.Response -ne $null) {
+                  $streamReader = [System.IO.StreamReader]::new($_.Exception.Response.GetResponseStream())
+                  $errorResponse = $streamReader.ReadToEnd() | ConvertFrom-Json
+                  Write-Host "Error Details: $($errorResponse | ConvertTo-Json -Depth 5)"
+                  Write-Host "Status Code: $($_.Exception.Response.StatusCode.value__)"
+
           }
       }
 
