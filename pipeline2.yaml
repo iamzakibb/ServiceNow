@@ -230,7 +230,7 @@ steps:
                       "Discussion" = $workItemDetails.fields.'System.History'
                   }
 
-              return $commitDetailsf
+              return $commitDetails
           }
           else {
               Write-Host "No commits found with associated work items."
