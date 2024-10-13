@@ -10,6 +10,11 @@ parameters:
   type: string
   default: "ATL - ATLANTAFED - DEV"
 
+- name: requested_by
+  displayName: "requested by"
+  type: string
+  default: "Malinda"
+
 - name: u_business_justification
   displayName: "Business Justification"
   type: string
@@ -45,10 +50,25 @@ parameters:
   type: string
   default: "Internal Application"
 
-- name: justification
-  displayName: "Justification"
+- name: justification_reason
+  displayName: "Why is the change required?"
   type: string
-  default: "Increase Productivity and meets DevOps Goals"
+  default: "Bug fix"
+
+- name: justification_requester
+  displayName: "Who requested the change?"
+  type: string
+  default: "John Doe"
+
+- name: justification_project
+  displayName: "What is the HPO and corporate strategic project?"
+  type: string
+  default: "N/A"
+
+- name: justification_contact
+  displayName: "Primary communication contact from business unit?"
+  type: string
+  default: "Business Unit Contact"
 
 - name: implementation_plan
   displayName: "Implementation Plan"
@@ -74,11 +94,82 @@ parameters:
   displayName: "Communication Plan"
   type: string
   default: "Notify DevSecOps Agile Team"
+
+- name: desc_summary
+  displayName: "Summary: What is being done?"
+  type: string
+  default: "Setup DEVOPS Pipeline"
+
+- name: desc_restriction_window
+  displayName: "Is this Change being requested during the FOMC Restriction window?"
+  type: string
+  default: "N"
+
+- name: desc_research_impact
+  displayName: "Will it impact Research?"
+  type: string
+  default: "N"
+
+- name: desc_environment
+  displayName: "Environment"
+  type: string
+  default: "Production"
+
+- name: desc_servers
+  displayName: "Server(s) affected"
+  type: string
+  default: "mac-p-prod-asdb-mcss.database.windows.net"
+
+- name: desc_application
+  displayName: "Application"
+  type: string
+  default: "MCSS"
+
+- name: desc_impacted_areas
+  displayName: "Area(s) Impacted"
+  type: string
+  default: "Contingency Information Anywhere"
+
+- name: desc_testing
+  displayName: "Testing: what kind of test?"
+  type: string
+  default: "Tested in QA"
+
 steps:
 - task: PowerShell@2
   inputs:
     targetType: 'inline'
     script: |
+      # Gather description fields into an array
+      $descriptionArray = @(
+        "Summary: ${{ parameters.desc_summary }}",
+        "FOMC Restriction Window: ${{ parameters.desc_restriction_window }}",
+        "Research Impact: ${{ parameters.desc_research_impact }}",
+        "Environment: ${{ parameters.desc_environment }}",
+        "Server(s): ${{ parameters.desc_servers }}",
+        "Application: ${{ parameters.desc_application }}",
+        "Area(s) Impacted: ${{ parameters.desc_impacted_areas }}",
+        "Testing: ${{ parameters.desc_testing }}"
+      )
+
+      $description = $descriptionArray -join "`n"
+
+      # Gather justification fields into an array
+      $justificationArray = @(
+        "Why is the change required? ${{ parameters.justification_reason }}",
+        "Who requested the change? ${{ parameters.justification_requester }}",
+        "HPO/Corporate Strategic Project: ${{ parameters.justification_project }}",
+        "Primary Business Contact: ${{ parameters.justification_contact }}"
+      )
+
+      $justification = $justificationArray -join "`n"
+
+      #Write-Host "Description:"
+      #Write-Host $description
+
+      #Write-Host "Justification:"
+      #Write-Host $justification
+
       $collectionurl = "https://frb..." # Adjust accordingly
       $organization = ""
       $project = ""
@@ -120,7 +211,7 @@ steps:
                   "WorkItems" = @()
                }
 
-              # Retrieve details of associated work items
+               # Retrieve details of associated work items
               foreach ($workItem in $commitWithWorkItems.workItems) {
                   $workItemUrl = $workItem.url + "?api-version=7.0"
                   $workItemDetails = Invoke-RestMethod -Uri $workItemUrl -Method Get -Headers @{Authorization=("Basic $base64AuthInfo")}
@@ -138,10 +229,10 @@ steps:
                       "IterationPath" = $workItemDetails.fields.'System.IterationPath'
                       "Discussion" = $workItemDetails.fields.'System.History'
                   }
-              }
 
               return $commitDetails
-          } else {
+          }
+          else {
               Write-Host "No commits found with associated work items."
               return $null
           }
@@ -154,20 +245,8 @@ steps:
               [string]$username,
               [string]$password,
               [hashtable]$commitDetails,
-              [string]$cmdb_ci,
-              [string]$u_business_justification,
-              [string]$type,
-              [string]$impact,
-              [string]$state,
-              [string]$assignment_group,
-              [string]$category,
-              [string]$subcategory,
-              [string]$justification,
-              [string]$implementation_plan,
-              [string]$risk_and_impact_analysis,
-              [string]$backout_plan,
-              [string]$test_plan,
-              [string]$communication_plan
+              [string]$description,
+              [string]$justification
           )
 
           $change_endpoint = "/api/now/table/change_request"
@@ -178,28 +257,26 @@ steps:
           $encodedCreds = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes($pair))
 
           # Headers
-          $headers = @{
-              'Content-Type' = 'application/json'
-              'Accept' = 'application/json'
-              'Authorization' = "Basic $encodedCreds"
-          }
-          
+          $headers = @{'Content-Type' = 'application/json'; 'Authorization' = "Basic $encodedCreds"}
 
-          # Dynamic Payload based on commit details
+          $workItemDescriptions = ($commitDetails.WorkItems | ForEach-Object { "$($_.WitID) - $($_.Title)" }) -join "`n"
+
+          $payloadDescription = ($descriptionArray + $workItemDescriptions) -join "`n"
+
+          # Payload including description and justification
           $payload = @{
               cmdb_ci = "${{ parameters.cmdb_ci }}"
               u_business_justification = "${{ parameters.u_business_justification }}"
-              requested_by = $requestedBy
+              requested_by = "${{ parameters.requested_by }}"
               type = "${{ parameters.type }}"
-              priority = $commitDetails.WorkItems[0].Priority
               impact = "${{ parameters.impact }}"
               state = "${{ parameters.state }}"
               assignment_group = "${{ parameters.assignment_group }}"
               category = "${{ parameters.category }}"
               subcategory = "${{ parameters.subcategory }}"
               short_description = "Commit: $($commitDetails.CommitID) - $($commitDetails.Comment)"
-              description = ($commitDetails.WorkItems | ForEach-Object { "$($_.WitID) - $($_.Title)" }) -join "`n"
-              justification = "${{ parameters.justification }}"
+              description = $payloadDescription
+              justification = $justification
               implementation_plan = "${{ parameters.implementation_plan }}"
               risk_and_impact_analysis = "${{ parameters.risk_and_impact_analysis }}"
               backout_plan = "${{ parameters.backout_plan }}"
@@ -208,67 +285,21 @@ steps:
           } | ConvertTo-Json
 
           try {
-              # Invoke the API and get the response
               $response = Invoke-RestMethod -Uri $final_endpoint -Method Post -Headers $headers -Body $payload
-
-              # Check if the response contains expected fields
-              if ($response -and $response.result) {
-                  $ticketNumber = $response.result.number
-                  $sysID = $response.result.sys_id
-
-                  # Display the ticket number and sys_id
+              if ($response.result) {
                   Write-Host "Ticket created successfully."
-                  Write-Host "Ticket Number: $ticketNumber"
-                  Write-Host "Sys ID: $sysID"
-
-                  # Set pipeline variables
-                  Write-Host "##vso[task.setvariable variable=TicketNumber;]$ticketNumber"
-                  Write-Host "##vso[task.setvariable variable=SysID;]$sysID"
+                  Write-Host "Ticket Number: $($response.result.number)"
               }
-              else {
-                  Write-Host "Error: The response did not contain expected data."
-              }
-          }
-          catch {
-              Write-Host "An error occurred while trying to create the ServiceNow ticket."
-              if ($_.Exception.Response -ne $null) {
-                  $streamReader = [System.IO.StreamReader]::new($_.Exception.Response.GetResponseStream())
-                  $errorResponse = $streamReader.ReadToEnd() | ConvertFrom-Json
-                  Write-Host "Error Details: $($errorResponse | ConvertTo-Json -Depth 5)"
-                  Write-Host "Status Code: $($_.Exception.Response.StatusCode.value__)"
-              }
+          } catch {
+              Write-Host "Error occurred while creating ticket."
           }
       }
 
-      # Invoke the functions
-      $commitDetails = Get-CommitAndWorkItemDetails `
-          -collectionurl $collectionurl `
-          -organization $organization `
-          -project $project `
-          -repoId $repoId `
-          -token $token
+      # Execute functions
+      $commitDetails = Get-CommitAndWorkItemDetails -collectionurl $collectionurl -organization $organization -project $project -repoId $repoId -token $token
 
       if ($commitDetails) {
-          Create-ServiceNowTicket `
-              -instance $instance `
-              -username $username `
-              -password $password `
-              -commitDetails $commitDetails `
-              -cmdb_ci "${{ parameters.cmdb_ci }}" `
-              -u_business_justification "${{ parameters.u_business_justification }}" `
-              -type "${{ parameters.type }}" `
-              -impact "${{ parameters.impact }}" `
-              -state "${{ parameters.state }}" `
-              -assignment_group "${{ parameters.assignment_group }}" `
-              -category "${{ parameters.category }}" `
-              -subcategory "${{ parameters.subcategory }}" `
-              -justification "${{ parameters.justification }}" `
-              -implementation_plan "${{ parameters.implementation_plan }}" `
-              -risk_and_impact_analysis "${{ parameters.risk_and_impact_analysis }}" `
-              -backout_plan "${{ parameters.backout_plan }}" `
-              -test_plan "${{ parameters.test_plan }}" `
-              -communication_plan "${{ parameters.communication_plan }}"
-      }
-      else {
-          Write-Host "No valid commit details found."
+          Create-ServiceNowTicket -instance $instance -username $username -password $password -commitDetails $commitDetails -description $description -justification $justification
+      } else {
+          Write-Host "No valid commit details found. Skipping ticket creation."
       }
