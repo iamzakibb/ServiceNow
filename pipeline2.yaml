@@ -178,7 +178,7 @@ steps:
       $instance = "https://frsdev.servicenowservices.com"
       $username = "YourServiceNowUsername"
       $password = "YourServiceNowPassword"
-      $requestedBy = $env:BUILD_REQUESTEDFOR
+      
 
       # Function to retrieve the latest commit and associated work items
       function Get-CommitAndWorkItemDetails {
@@ -237,7 +237,7 @@ steps:
               return $null
           }
       }
-
+    }
       # Function to create a ServiceNow ticket
       function Create-ServiceNowTicket {
           Param(
@@ -309,7 +309,7 @@ steps:
 
           }
       }
-
+    }
       # Execute functions
       $commitDetails = Get-CommitAndWorkItemDetails -collectionurl $collectionurl -organization $organization -project $project -repoId $repoId -token $token
 
