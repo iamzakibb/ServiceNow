@@ -237,7 +237,7 @@ steps:
               return $null
           }
       }
-    }
+      }
       # Function to create a ServiceNow ticket
       function Create-ServiceNowTicket {
           Param(
@@ -309,10 +309,9 @@ steps:
 
           }
       }
-    }
+      }
       # Execute functions
       $commitDetails = Get-CommitAndWorkItemDetails -collectionurl $collectionurl -organization $organization -project $project -repoId $repoId -token $token
-
       if ($commitDetails) {
           Create-ServiceNowTicket -instance $instance -username $username -password $password -commitDetails $commitDetails -description $description -justification $justification
       } else {
