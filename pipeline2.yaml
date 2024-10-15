@@ -193,7 +193,7 @@ steps:
           # Base64-encode the PAT for authorization
           $base64AuthInfo = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes(":$token"))
 
-          # Construct the API URL to get commit details and associated work items
+          # Construct the API URL to get commit details and associated work item
           $baseUrl = "$collectionurl/$organization/$project/_apis/git/repositories/$repoId/commits?searchCriteria.includeWorkItems=true&api-version=7.0-preview.1"
 
           # Make the API call using the encoded PAT for authorization
