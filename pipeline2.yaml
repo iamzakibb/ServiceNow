@@ -261,7 +261,7 @@ steps:
 
           $workItemDescriptions = ($commitDetails.WorkItems | ForEach-Object { "$($_.WitID) - $($_.Title)" }) -join "`n"
 
-          $payloadDescription = ($descriptionArray + $workItemDescriptions) -join "`n"
+          $payloadDescription = ($workItemDescriptions + $descriptionArray ) -join "`n"
 
           # Payload including description and justification
           $payload = @{
