@@ -150,7 +150,7 @@ steps:
         "Application: ${{ parameters.desc_application }}",
         "Area(s) Impacted: ${{ parameters.desc_impacted_areas }}",
         "Testing: ${{ parameters.desc_testing }}"
-      )
+      ) 
 
       $description = $descriptionArray -join "`n"
 
@@ -178,7 +178,7 @@ steps:
       $instance = "https://frsdev.servicenowservices.com"
       $username = "YourServiceNowUsername"
       $password = "YourServiceNowPassword"
-      
+
 
       # Function to retrieve the latest commit and associated work items
       function Get-CommitAndWorkItemDetails {
@@ -261,7 +261,8 @@ steps:
 
           $workItemDescriptions = ($commitDetails.WorkItems | ForEach-Object { "$($_.WitID) - $($_.Title)" }) -join "`n"
 
-          $payloadDescription = ($workItemDescriptions + $descriptionArray ) -join "`n"
+
+          $fullDescription = "$workItemDescriptions`n`n----------------------------`n`n$description"
 
           # Payload including description and justification
           $payload = @{
@@ -275,7 +276,7 @@ steps:
               category = "${{ parameters.category }}"
               subcategory = "${{ parameters.subcategory }}"
               short_description = "Commit: $($commitDetails.CommitID) - $($commitDetails.Comment)"
-              description = $payloadDescription
+              description = $fullDescription
               justification = $justification
               implementation_plan = "${{ parameters.implementation_plan }}"
               risk_and_impact_analysis = "${{ parameters.risk_and_impact_analysis }}"
